@@ -1,0 +1,9 @@
+server:
+  port: "8080"
+  read_timeout: 30
+  write_timeout: 30
+
+security:
+  secret_key: "secretkey"
+  enable_cors: true
+  max_request_size: 1048576  # 1MB

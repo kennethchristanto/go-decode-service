@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: Decode Order Number API
+  description: |
+    A RESTful API to encode/encrypt and decode/decrypt order numbers using URL-encoding and DES encryption.
+    
+    This API provides endpoints for:
+    - Decrypting encrypted order numbers
+    - Encrypting plain order numbers
+    - Health check endpoint
+    
+    The API supports clean architecture principles with proper separation of concerns.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the API server is running and healthy
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/decrypt:
+    post:
+      tags:
+        - Decryption
+      summary: Decrypt an order number
+      description: |
+        Decrypts an encrypted order number using URL-decoding and DES encryption.
+        
+        The decryption process:
+        1. URL-decodes the input string twice to handle double-encoded characters
+        2. Base64-decodes the secret key to get the DES key
+        3. Base64-decodes the encrypted data
+        4. DES-decrypts the data using ECB mode with PKCS5 padding
+        5. Returns the decrypted plain text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecryptRequest'
+            examples:
+              example1:
+                summary: Basic decryption
+                value:
+                  encrypted_order: "qZCC%252FTvzJYUpNd9VllcaYfYKCkAKeOR6"
+                  secret_key: "secretkey"
+      responses:
+        '200':
+          description: Decryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DecryptResponse'
+        '400':
+          description: Invalid request format or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '500':
+          description: Decryption failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+
+  /api/v1/encrypt:
+    post:
+      tags:
+        - Encryption
+      summary: Encrypt an order number
+      description: |
+        Encrypts a plain order number using DES encryption and URL-encoding.
+        
+        The encryption process:
+        1. Adds PKCS5 padding to the plain text to match DES block size (8 bytes)
+        2. DES-encrypts the data using ECB mode with PKCS5 padding
+        3. Base64-encodes the encrypted data
+        4. Double URL-encodes the Base64 string to match the format expected by decrypt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptRequest'
+            examples:
+              example1:
+                summary: Basic encryption
+                value:
+                  plain_order: "A-121226-ABCDEF"
+                  secret_key: "secretkey"
+      responses:
+        '200':
+          description: Encryption successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EncryptResponse'
+        '400':
+          description: Invalid request format or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '500':
+          description: Encryption failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+
+components:
+  schemas:
+    APIResponse:
+      type: object
+      description: Standard API response format
+      properties:
+        success:
+          type: boolean
+          description: Whether the request was successful
+        data:
+          type: object
+          description: Response data (null for errors)
+        message:
+          type: string
+          description: Response message
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp
+
+    DecryptRequest:
+      type: object
+      required:
+        - encrypted_order
+        - secret_key
+      properties:
+        encrypted_order:
+          type: string
+          description: The encrypted order number to decrypt
+          example: "qZCC%252FTvzJYUpNd9VllcaYfYKCkAKeOR6"
+        secret_key:
+          type: string
+          description: The Base64-encoded secret key for DES encryption
+          example: "secretkey"
+
+    EncryptRequest:
+      type: object
+      required:
+        - plain_order
+        - secret_key
+      properties:
+        plain_order:
+          type: string
+          description: The plain order number to encrypt
+          example: "A-121226-ABCDEF"
+        secret_key:
+          type: string
+          description: The Base64-encoded secret key for DES encryption
+          example: "secretkey"
+
+    DecryptResponse:
+      type: object
+      properties:
+        decrypted_order:
+          type: string
+          description: The decrypted order number
+          example: "A-121226-ABCDEF"
+
+    EncryptResponse:
+      type: object
+      properties:
+        encrypted_order:
+          type: string
+          description: The encrypted order number
+          example: "qZCC%252FTvzJYUpNd9VllcaYfYKCkAKeOR6"
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Health status of the API
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication (future implementation)
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Decryption
+    description: Order number decryption endpoints
+  - name: Encryption
+    description: Order number encryption endpoints
